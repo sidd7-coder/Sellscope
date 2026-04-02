@@ -6,10 +6,6 @@ import type { ForecastResponse, SalesRow } from "@/lib/types";
 import { cleanSalesRows } from "@/lib/clean";
 import { parseCsvFile, parseExcelFile } from "@/lib/parseFiles";
 import { Card } from "@/components/ui/Card";
-import { SalesTrendChart } from "@/components/charts/SalesTrendChart";
-import { ForecastVsActualChart } from "@/components/charts/ForecastVsActualChart";
-import { ProductDemandBarChart } from "@/components/charts/ProductDemandBarChart";
-import { FutureDemandChart } from "@/components/charts/FutureDemandChart";
 
 const manualSchema = z.object({
   product: z.string().min(1, "Product is required"),
@@ -33,7 +29,7 @@ export function DashboardClient() {
 
   const previewRows = useMemo(() => rows.slice(0, 200), [rows]);
 
-  // ✅ NEW: Download CSV FUNCTION
+  // ✅ Download CSV
   const downloadCSV = () => {
     if (!rows || rows.length === 0) return;
 
@@ -58,28 +54,34 @@ export function DashboardClient() {
   function addManual(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
+
     const parsed = manualSchema.safeParse({
       product,
       date,
       quantity,
       sales,
     });
+
     if (!parsed.success) {
       const msg = parsed.error.errors.map((x) => x.message).join(" ");
       setFormError(msg);
       return;
     }
+
     const row: SalesRow = {
       product: parsed.data.product.trim(),
       date: parsed.data.date,
       quantity: parsed.data.quantity,
       sales: parsed.data.sales,
     };
+
     const cleaned = cleanSalesRows([row]);
+
     if (cleaned.length === 0) {
       setFormError("Invalid date.");
       return;
     }
+
     setRows((prev) => cleanSalesRows([...prev, ...cleaned]));
     setProduct("");
     setDate("");
@@ -91,7 +93,9 @@ export function DashboardClient() {
     const f = e.target.files?.[0];
     e.target.value = "";
     if (!f) return;
+
     setFileError(null);
+
     try {
       const parsed = await parseCsvFile(f);
       setRows((prev) => cleanSalesRows([...prev, ...parsed]));
@@ -104,7 +108,9 @@ export function DashboardClient() {
     const f = e.target.files?.[0];
     e.target.value = "";
     if (!f) return;
+
     setFileError(null);
+
     try {
       const parsed = await parseExcelFile(f);
       setRows((prev) => cleanSalesRows([...prev, ...parsed]));
@@ -121,13 +127,16 @@ export function DashboardClient() {
   async function runForecast() {
     setForecastError(null);
     if (rows.length === 0) return;
+
     setLoading(true);
+
     try {
       const res = await fetch("/api/forecast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rows, period }),
       });
+
       const data = await res.json();
       setResult(data);
     } catch {
@@ -140,9 +149,9 @@ export function DashboardClient() {
   return (
     <div className="space-y-8">
       <Card>
-        {/* ✅ UPDATED HEADER WITH BUTTON ON RIGHT */}
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-lg font-semibold">Dataset preview</h3>
+        {/* ✅ FIXED HEADER */}
+        <h3 className="text-lg font-semibold flex justify-between items-center mb-3">
+          Dataset preview
 
           <button
             onClick={downloadCSV}
@@ -151,7 +160,7 @@ export function DashboardClient() {
           >
             Download CSV
           </button>
-        </div>
+        </h3>
 
         <div className="text-xs mb-2">{rows.length} rows</div>
 
@@ -164,6 +173,7 @@ export function DashboardClient() {
               <th>Sales</th>
             </tr>
           </thead>
+
           <tbody>
             {previewRows.map((r, i) => (
               <tr key={i}>
