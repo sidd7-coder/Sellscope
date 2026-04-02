@@ -150,7 +150,7 @@ export function DashboardClient() {
     <div className="space-y-8">
       <Card>
         {/* ✅ FIXED HEADER */}
-        <h3 className="text-lg font-semibold flex justify-between items-center mb-3">
+        <h3 className="text-lg font-semibold flex justify-between items-center mb-3 w-full">
           Dataset preview
 
           <button
