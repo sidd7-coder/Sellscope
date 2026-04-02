@@ -18,7 +18,6 @@ const ingestSchema = z.object({
   mimeType: z.string().min(1),
   base64: z.string().min(1),
   autoDetect: z.boolean().optional().default(true),
-  // Mapping values must be column header strings from the uploaded file.
   mapping: z
     .object({
       product: z.string().optional(),
@@ -95,32 +94,10 @@ export async function POST(req: Request) {
       dataRows = (table.slice(1) ?? []).map((r) => r ?? []);
     }
 
-    if (headers.length === 0) {
-      return NextResponse.json(
-        { status: "error", error: "No headers detected in the uploaded file." },
-        { status: 400 }
-      );
-    }
-
     const { detected, missing } = autoDetectMapping(headers);
 
-    const finalMapping: DetectedMapping | undefined = mapping
-      ? mapping
-      : detected;
+    const finalMapping: DetectedMapping | undefined = mapping ? mapping : detected;
 
-    if ((!mapping || autoDetect) && missing.length > 0 && !finalMapping) {
-      return NextResponse.json(
-        {
-          status: "needs_mapping",
-          headers,
-          detected,
-          missing,
-        },
-        { status: 200 }
-      );
-    }
-
-    // If auto-detection failed and the client did not provide mapping, ask for mapping.
     if (mapping == null && missing.length > 0) {
       return NextResponse.json(
         { status: "needs_mapping", headers, detected, missing },
@@ -135,31 +112,11 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate mapping contains required fields.
-    for (const field of ["product", "date", "quantity", "sales"] as CanonicalField[]) {
-      if (!finalMapping[field]) {
-        return NextResponse.json(
-          {
-            status: "error",
-            error: `Missing required mapping for "${field}".`,
-          },
-          { status: 400 }
-        );
-      }
-    }
-
-    let indices: ReturnType<typeof resolveHeaderIndices>;
-    try {
-      indices = resolveHeaderIndices(headers, finalMapping);
-    } catch (e) {
-      return NextResponse.json(
-        { status: "error", error: "Mapping could not be resolved to column indices." },
-        { status: 400 }
-      );
-    }
+    let indices = resolveHeaderIndices(headers, finalMapping);
 
     const maxRows = 20000;
-    const partials: Partial<SalesRow>[] = [];
+    const partials: SalesRow[] = [];
+
     for (let i = 0; i < dataRows.length && partials.length < maxRows; i++) {
       const row = dataRows[i] as unknown[] | undefined;
       if (!row || row.length === 0) continue;
@@ -169,7 +126,6 @@ export async function POST(req: Request) {
       const quantityVal = row[indices.quantity];
       const salesVal = row[indices.sales];
 
-      // Skip rows that are effectively empty.
       if (
         (productVal == null || String(productVal).trim() === "") &&
         (dateVal == null || String(dateVal).trim() === "") &&
@@ -180,11 +136,11 @@ export async function POST(req: Request) {
       }
 
       partials.push({
-      product: String(productVal),
-      date: String(dateVal),
-      quantity: Number(quantityVal),
-    sales: Number(salesVal),
-});
+        product: String(productVal ?? ""),
+        date: String(dateVal ?? ""),
+        quantity: Number(quantityVal ?? 0),
+        sales: Number(salesVal ?? 0),
+      });
     }
 
     const rows = cleanSalesRows(partials);
@@ -203,4 +159,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
