@@ -181,9 +181,9 @@ export async function POST(req: Request) {
 
       partials.push({
         product: productVal as unknown as string,
-        date: dateVal as unknown as string | number | Date,
-        quantity: quantityVal as unknown as number | string,
-        sales: salesVal as unknown as number | string,
+        date: String(dateVal),
+        quantity: Number(quantityVal),
+        sales: Number(salesVal),
       });
     }
 
