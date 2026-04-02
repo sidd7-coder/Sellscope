@@ -150,17 +150,19 @@ export function DashboardClient() {
     <div className="space-y-8">
       <Card>
         {/* ✅ FIXED HEADER */}
-        <h3 className="text-lg font-semibold flex justify-between items-center mb-3 w-full">
-          Dataset preview
+        <div className="flex justify-between items-center mb-3">
+  <h3 className="text-lg font-semibold">
+    Dataset preview
+  </h3>
 
-          <button
-            onClick={downloadCSV}
-            disabled={rows.length === 0}
-            className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
-          >
-            Download CSV
-          </button>
-        </h3>
+  <button
+    onClick={downloadCSV}
+    disabled={rows.length === 0}
+    className="px-3 py-1 bg-blue-500 text-white rounded disabled:opacity-50"
+  >
+    Download CSV
+  </button>
+</div>
 
         <div className="text-xs mb-2">{rows.length} rows</div>
 
