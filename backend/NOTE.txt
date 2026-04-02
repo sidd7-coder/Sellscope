@@ -1,0 +1,6 @@
+This project uses Next.js API routes instead of a separate Node server.
+
+Forecast API: src/app/api/forecast/route.ts
+Core logic: src/lib/forecast.ts
+
+To add a Python microservice later, proxy from the route or call an external URL from the same route handler.
