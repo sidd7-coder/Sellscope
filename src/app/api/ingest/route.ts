@@ -180,11 +180,11 @@ export async function POST(req: Request) {
       }
 
       partials.push({
-        product: productVal as unknown as string,
-        date: String(dateVal),
-        quantity: Number(quantityVal),
-        sales: Number(salesVal),
-      });
+      product: String(productVal),
+      date: String(dateVal),
+      quantity: Number(quantityVal),
+    sales: Number(salesVal),
+});
     }
 
     const rows = cleanSalesRows(partials);
