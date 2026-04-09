@@ -193,7 +193,7 @@ export function LandingUploadClient() {
               <input
                 id="sellscope-upload"
                 type="file"
-                accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                accept=".csv,.tsv,.xlsx,.xls,.json,.txt,text/csv,application/json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -292,7 +292,7 @@ export function LandingUploadClient() {
           <div className="space-y-6">
             <div className="grid gap-6 lg:grid-cols-2">
               <Card title="Sales rhythm (Actual vs AI prediction)">
-                <SalesTrendChart data={result.salesTrend} />
+                <SalesTrendChart data={result.salesTrend} future={result.futureForecast} />
               </Card>
               <Card title="Forecast vs actual (validation slice)">
                 <ForecastVsActualChart data={result.forecastVsActual} />

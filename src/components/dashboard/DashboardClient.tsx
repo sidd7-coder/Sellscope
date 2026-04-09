@@ -398,7 +398,7 @@ export function DashboardClient() {
         <div className="space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <Card title="Sales rhythm (Actual vs AI prediction)">
-              <SalesTrendChart data={result.salesTrend} />
+              <SalesTrendChart data={result.salesTrend} future={result.futureForecast} />
             </Card>
             <Card title="Forecast vs actual (validation slice)">
               <ForecastVsActualChart data={result.forecastVsActual} />

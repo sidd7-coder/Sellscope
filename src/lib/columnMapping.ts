@@ -8,10 +8,10 @@ export const canonicalFieldLabels: Record<CanonicalField, string> = {
 };
 
 const synonyms: Record<CanonicalField, string[]> = {
-  product: ["product", "product_name", "product_id", "item", "item_name"],
-  date: ["date", "order_date", "transaction_date", "timestamp", "sale_date"],
-  quantity: ["quantity", "qty", "units", "volume"],
-  sales: ["sales", "revenue", "total", "amount", "sales_amount"],
+  product: ["product", "product_name", "product_id", "item", "item_name", "name", "sku"],
+  date: ["date", "order_date", "transaction_date", "timestamp", "sale_date", "day", "time"],
+  quantity: ["quantity", "qty", "units", "volume", "sold", "count"],
+  sales: ["sales", "revenue", "total", "amount", "sales_amount", "gmv", "value"],
 };
 
 function normalizeHeader(raw: string): string {
@@ -36,7 +36,8 @@ export function autoDetectMapping(headers: string[]): {
   missing: CanonicalField[];
 } {
   const detected: DetectedMapping = {};
-  const missing: CanonicalField[] = ["product", "date", "quantity", "sales"];
+  const fields: CanonicalField[] = ["product", "date", "quantity", "sales"];
+  const missing: CanonicalField[] = [...fields];
 
   // Pre-normalize synonyms for fast comparisons.
   const synNorm: Record<CanonicalField, string[]> = {
@@ -46,13 +47,48 @@ export function autoDetectMapping(headers: string[]): {
     sales: synonyms.sales.map(normalizeHeader),
   };
 
-  for (const field of missing.slice()) {
-    const wanted = new Set(synNorm[field]);
-    const idx = headers.findIndex((h) => wanted.has(normalizeHeader(h)));
-    if (idx !== -1) {
-      detected[field] = headers[idx];
-      const i = missing.indexOf(field);
-      if (i !== -1) missing.splice(i, 1);
+  const normalizedHeaders = headers.map((h) => normalizeHeader(h));
+  const usedHeaderIndices = new Set<number>();
+
+  const scoreFor = (field: CanonicalField, headerNorm: string): number => {
+    if (!headerNorm) return -1;
+    const candidates = synNorm[field];
+    if (candidates.includes(headerNorm)) return 100;
+    if (candidates.some((c) => headerNorm.includes(c) || c.includes(headerNorm))) return 70;
+    if (
+      field === "quantity" &&
+      (headerNorm.includes("qty") || headerNorm.includes("unit") || headerNorm.includes("sold"))
+    ) {
+      return 60;
+    }
+    if (field === "sales" && (headerNorm.includes("rev") || headerNorm.includes("amount"))) {
+      return 60;
+    }
+    if (field === "date" && (headerNorm.includes("date") || headerNorm.includes("time"))) {
+      return 60;
+    }
+    if (field === "product" && (headerNorm.includes("item") || headerNorm.includes("product"))) {
+      return 60;
+    }
+    return -1;
+  };
+
+  for (const field of fields) {
+    let bestIdx = -1;
+    let bestScore = -1;
+    for (let i = 0; i < normalizedHeaders.length; i++) {
+      if (usedHeaderIndices.has(i)) continue;
+      const score = scoreFor(field, normalizedHeaders[i]);
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx !== -1 && bestScore >= 60) {
+      detected[field] = headers[bestIdx];
+      usedHeaderIndices.add(bestIdx);
+      const mIdx = missing.indexOf(field);
+      if (mIdx !== -1) missing.splice(mIdx, 1);
     }
   }
 

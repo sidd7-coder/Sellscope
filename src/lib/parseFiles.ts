@@ -43,3 +43,19 @@ export function parseExcelFile(file: File): Promise<SalesRow[]> {
     return rows;
   });
 }
+
+export function parseJsonFile(file: File): Promise<SalesRow[]> {
+  return file.text().then((text) => {
+    const raw = JSON.parse(text) as unknown;
+    if (!Array.isArray(raw)) return [];
+    const rows: SalesRow[] = [];
+    for (const item of raw) {
+      if (!item || typeof item !== "object") continue;
+      const parsed = rowFromRecord(item as Record<string, unknown>);
+      if (parsed && parsed.product && parsed.date && parsed.quantity != null && parsed.sales != null) {
+        rows.push(parsed as SalesRow);
+      }
+    }
+    return rows;
+  });
+}

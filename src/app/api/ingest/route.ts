@@ -38,6 +38,41 @@ function isExcelFile(fileName: string, mimeType: string) {
   );
 }
 
+function isJsonFile(fileName: string, mimeType: string) {
+  const fn = fileName.toLowerCase();
+  return fn.endsWith(".json") || mimeType.includes("json");
+}
+
+function parseDelimitedText(text: string): unknown[][] {
+  const parsed = Papa.parse<string[]>(text, {
+    header: false,
+    skipEmptyLines: true,
+    delimiter: "",
+  });
+  return (parsed.data as unknown[][]) ?? [];
+}
+
+function parseJsonTable(text: string): unknown[][] {
+  const raw = JSON.parse(text) as unknown;
+  if (!Array.isArray(raw) || raw.length === 0) return [];
+
+  if (Array.isArray(raw[0])) {
+    return raw as unknown[][];
+  }
+
+  if (typeof raw[0] === "object" && raw[0] !== null) {
+    const records = raw as Record<string, unknown>[];
+    const keys = Array.from(
+      new Set(records.flatMap((r) => Object.keys(r ?? {})))
+    );
+    if (!keys.length) return [];
+    const rows = records.map((r) => keys.map((k) => r?.[k] ?? ""));
+    return [keys, ...rows];
+  }
+
+  return [];
+}
+
 export async function POST(req: Request) {
   try {
     const json = await req.json();
@@ -53,19 +88,25 @@ export async function POST(req: Request) {
     const buf = Buffer.from(base64, "base64");
 
     const excel = isExcelFile(fileName, mimeType);
+    const jsonFile = isJsonFile(fileName, mimeType);
     let headers: string[] = [];
     let dataRows: unknown[][] = [];
 
-    if (!excel) {
-      const csvText = buf.toString("utf8");
-      const parsedCsv = Papa.parse<string[]>(csvText, {
-        header: false,
-        skipEmptyLines: true,
-      });
-      const table = parsedCsv.data as unknown[][];
+    if (!excel && !jsonFile) {
+      const textTable = parseDelimitedText(buf.toString("utf8"));
+      if (!Array.isArray(textTable) || textTable.length < 2) {
+        return NextResponse.json(
+          { status: "error", error: "File must have a header row plus data rows." },
+          { status: 400 }
+        );
+      }
+      headers = (textTable[0] ?? []).map((x) => String(x ?? "").trim());
+      dataRows = (textTable.slice(1) ?? []).map((r) => r ?? []);
+    } else if (jsonFile) {
+      const table = parseJsonTable(buf.toString("utf8"));
       if (!Array.isArray(table) || table.length < 2) {
         return NextResponse.json(
-          { status: "error", error: "CSV must have a header row plus data rows." },
+          { status: "error", error: "JSON must contain structured rows with headers." },
           { status: 400 }
         );
       }
@@ -99,10 +140,12 @@ export async function POST(req: Request) {
     const finalMapping: DetectedMapping | undefined = mapping ? mapping : detected;
 
     if (mapping == null && missing.length > 0) {
-      return NextResponse.json(
-        { status: "needs_mapping", headers, detected, missing },
-        { status: 200 }
-      );
+      return NextResponse.json({
+        status: "needs_mapping",
+        headers,
+        detected,
+        missing,
+      });
     }
 
     if (!finalMapping) {
@@ -112,10 +155,10 @@ export async function POST(req: Request) {
       );
     }
 
-    let indices = resolveHeaderIndices(headers, finalMapping);
+    const indices = resolveHeaderIndices(headers, finalMapping);
 
     const maxRows = 20000;
-    const partials: SalesRow[] = [];
+    const partials: Partial<SalesRow>[] = [];
 
     for (let i = 0; i < dataRows.length && partials.length < maxRows; i++) {
       const row = dataRows[i] as unknown[] | undefined;
@@ -137,13 +180,23 @@ export async function POST(req: Request) {
 
       partials.push({
         product: String(productVal ?? ""),
-        date: String(dateVal ?? ""),
-        quantity: Number(quantityVal ?? 0),
-        sales: Number(salesVal ?? 0),
+        date: dateVal as string,
+        quantity: quantityVal as number,
+        sales: salesVal as number,
       });
     }
 
     const rows = cleanSalesRows(partials);
+    if (rows.length === 0) {
+      return NextResponse.json(
+        {
+          status: "error",
+          error:
+            "The uploaded file could not be mapped into usable product/date/quantity/sales rows.",
+        },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       status: "ok",
