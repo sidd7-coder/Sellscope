@@ -144,9 +144,13 @@ export function DashboardClient() {
 
     try {
       const parsed = await parseCsvFile(f);
+      if (parsed.length === 0) {
+        setFileError("Missing required columns: product, date, quantity, sales.");
+        return;
+      }
       setRows((prev) => cleanSalesRows([...prev, ...parsed]));
     } catch {
-      setFileError("Could not read CSV.");
+      setFileError("Missing required columns: product, date, quantity, sales.");
     }
   }
 
@@ -159,9 +163,13 @@ export function DashboardClient() {
 
     try {
       const parsed = await parseExcelFile(f);
+      if (parsed.length === 0) {
+        setFileError("Missing required columns: product, date, quantity, sales.");
+        return;
+      }
       setRows((prev) => cleanSalesRows([...prev, ...parsed]));
     } catch {
-      setFileError("Could not read Excel.");
+      setFileError("Missing required columns: product, date, quantity, sales.");
     }
   }
 

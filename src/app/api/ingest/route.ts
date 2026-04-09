@@ -140,12 +140,15 @@ export async function POST(req: Request) {
     const finalMapping: DetectedMapping | undefined = mapping ? mapping : detected;
 
     if (mapping == null && missing.length > 0) {
-      return NextResponse.json({
-        status: "needs_mapping",
-        headers,
-        detected,
-        missing,
-      });
+      console.log("ingest headers:", headers);
+      console.log("ingest mappedColumns:", detected);
+      return NextResponse.json(
+        {
+          status: "error",
+          error: `Missing required mapped columns: ${missing.join(", ")}`,
+        },
+        { status: 400 }
+      );
     }
 
     if (!finalMapping) {
@@ -180,14 +183,16 @@ export async function POST(req: Request) {
 
       partials.push({
         product: String(productVal ?? ""),
-        date: dateVal as string,
-        quantity: quantityVal as number,
-        sales: salesVal as number,
+        date: dateVal as any,
+        quantity: quantityVal as any,
+        sales: salesVal as any,
       });
     }
 
     const rows = cleanSalesRows(partials);
     if (rows.length === 0) {
+      console.log("ingest headers:", headers);
+      console.log("ingest mappedColumns:", finalMapping);
       return NextResponse.json(
         {
           status: "error",
