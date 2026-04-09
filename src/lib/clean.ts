@@ -60,16 +60,20 @@ export function rowFromRecord(rec: Record<string, unknown>): Partial<SalesRow> |
   const quantity = toNum(
     flat["quantity"] ??
       flat["qty"] ??
+      flat["qnt"] ??
+      flat["count"] ??
       flat["units"] ??
       flat["volume"] ??
       flat["sold"]
   );
   const sales = toNum(
     flat["sales"] ??
+      flat["sale"] ??
       flat["revenue"] ??
       flat["sales_amount"] ??
       flat["amount"] ??
-      flat["total"]
+      flat["total"] ??
+      flat["s"]
   );
 
   const date = parseDate(dateRaw as string | Date);

@@ -8,21 +8,20 @@ export const canonicalFieldLabels: Record<CanonicalField, string> = {
 };
 
 const synonyms: Record<CanonicalField, string[]> = {
-  product: ["product", "product_name", "product_id", "item", "item_name", "name", "sku"],
-  date: ["date", "order_date", "transaction_date", "timestamp", "sale_date", "day", "time"],
-  quantity: ["quantity", "qty", "units", "volume", "sold", "count"],
-  sales: ["sales", "revenue", "total", "amount", "sales_amount", "gmv", "value"],
+  product: ["product", "item", "name", "product_name"],
+  date: ["date", "day", "timestamp", "time"],
+  quantity: ["quantity", "qty", "qnt", "count", "units"],
+  sales: ["sales", "sale", "revenue", "amount", "s"],
 };
 
 function normalizeHeader(raw: string): string {
-  // Case-insensitive and whitespace/punctuation tolerant.
-  // Example: "Product Name" -> "product_name"
+  // Case-insensitive and whitespace tolerant.
+  // Example: "Product Name" -> "productname"
   return raw
     .trim()
     .toLowerCase()
-    .replace(/[\s\-_.]+/g, "_")
-    .replace(/[^a-z0-9_]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9]/g, "");
 }
 
 export function normalizeHeaderForDetect(raw: string): string {
